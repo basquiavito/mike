@@ -23,7 +23,7 @@ st.title("Options Wealth")
 # ======================================
 st.sidebar.header("Input Options")
 
-default_tickers = ["NVDA", "AVGO","AMD","PLTR","MRVL","uber","AMZN","AAPL","googl","MSFT","META","tsla","sbux","nke","chwy","DKNG","GM","cmg","c","wfc","hood","coin","bac","jpm","PYPL","tgt"]
+default_tickers = ["SPY","QQQ","NVDA", "AVGO","AMD","PLTR","MRVL","uber","AMZN","AAPL","googl","MSFT","META","tsla","sbux","nke","chwy","DKNG","GM","cmg","c","wfc","hood","coin","bac","jpm","PYPL","tgt"]
 tickers = st.sidebar.multiselect(
     "Select Tickers",
     options=default_tickers,
@@ -106,22 +106,29 @@ if st.sidebar.button("Run Analysis"):
                 # ================
                 # 1) Fetch Previous Day's Data
                 # ================
+                daily_data = yf.download(
+                    t,
+                    end=start_date,
+                    interval="1d",
+                    progress=False,
+                    threads=False
+                )
 
-                        # ✅ Fetch last 3 daily bars to ensure coverage across weekends/holidays
-                daily_data = yf.download(t, period="5d", interval="1d", progress=False, threads=False)
+                prev_close, prev_high, prev_low = None, None, None
+                prev_close_str, prev_high_str, prev_low_str = "N/A", "N/A", "N/A"
 
-                # Ensure column flattening
-                if isinstance(daily_data.columns, pd.MultiIndex):
-                    daily_data.columns = [c[0] if isinstance(c, tuple) else c for c in daily_data.columns]
+                if not daily_data.empty:
+                    if isinstance(daily_data.columns, pd.MultiIndex):
+                        daily_data.columns = daily_data.columns.map(
+                            lambda x: x[0] if isinstance(x, tuple) else x
+                        )
+                    prev_close = daily_data["Close"].iloc[-1]
+                    prev_high = daily_data["High"].iloc[-1]
+                    prev_low = daily_data["Low"].iloc[-1]
 
-                # ✅ Use the **second to last** row as yesterday
-                if len(daily_data) >= 2:
-                    prev_close = daily_data["Close"].iloc[-2]
-                    prev_high = daily_data["High"].iloc[-2]
-                    prev_low  = daily_data["Low"].iloc[-2]
-                else:
-                    prev_close = prev_high = prev_low = None
-
+                    prev_close_str = f"{prev_close:.2f}"
+                    prev_high_str = f"{prev_high:.2f}"
+                    prev_low_str = f"{prev_low:.2f}"
 
                 # ================
                 # 2) Fetch Intraday Data
@@ -290,36 +297,10 @@ if st.sidebar.button("Run Analysis"):
 
                 intraday["TD Trap"] = intraday.apply(check_td_trap, axis=1)
 
-                def detect_mike_call_ear(intraday_df):
-                    """
-                    Automatically detects Mike 👂 moments based on stock price dropping
-                    0.48% to 0.55% from the previous day's close.
-
-                    Parameters:
-                        intraday_df (DataFrame): Must contain a 'Price' column and include the prior close as the first row.
-
-                    Returns:
-                        DataFrame: With 'Mike_Ear_Emoji' column.
-                    """
-                    if intraday_df.empty or "Price" not in intraday_df.columns:
-                        intraday_df["Mike_Ear_Emoji"] = ""
-                        return intraday_df
-
-                    # Use first valid price as yesterday's close
-                    prev_close = intraday_df["Price"].iloc[0]
-
-                    lower = prev_close * 0.9945  # -0.55%
-                    upper = prev_close * 0.9952  # -0.48%
-
-                    intraday_df["Mike_Ear_Emoji"] = intraday_df["Price"].apply(
-                        lambda x: "👂" if lower <= x <= upper else ""
-                    )
-
-                    return intraday_df
 
 
 
-                    intraday = detect_mike_call_ear(intraday)
+
 
 
 
@@ -2676,7 +2657,6 @@ if st.sidebar.button("Run Analysis"):
 
 
 
-
                 # UPPER WICK DETECTION (simple and lightweight)
 
                 # Calculate candle parts
@@ -2694,130 +2674,130 @@ if st.sidebar.button("Run Analysis"):
                 # Final condition: big upper wick + valid body
                 intraday['UpperWickFlag'] = intraday['LongUpperWick'] & intraday['ValidBody']
 
-                with st.expander("🕯️ Hidden Candlestick + Ichimoku View", expanded=True):
-                    # ❶ create a 2-row figure (70 % price, 30 % volume)
-                    fig = make_subplots(rows=2, cols=1,
-                                        shared_xaxes=True,
-                                        vertical_spacing=0.03,
-                                        row_heights=[0.7, 0.3])
+                # with st.expander("🕯️ Hidden Candlestick + Ichimoku View", expanded=True):
+                #     # ❶ create a 2-row figure (70 % price, 30 % volume)
+                #     fig = make_subplots(rows=2, cols=1,
+                #                         shared_xaxes=True,
+                #                         vertical_spacing=0.03,
+                #                         row_heights=[0.7, 0.3])
 
-                    # ❷ ── price & Ichimoku (row 1) ──────────────────────────────────────
-                    fig.add_trace(go.Candlestick(
-                        x=intraday['Time'],
-                        open=intraday['Open'],
-                        high=intraday['High'],
-                        low=intraday['Low'],
-                        close=intraday['Close'],
-                        name='Candles'),
-                        row=1, col=1)
+                #     # ❷ ── price & Ichimoku (row 1) ──────────────────────────────────────
+                #     fig.add_trace(go.Candlestick(
+                #         x=intraday['Time'],
+                #         open=intraday['Open'],
+                #         high=intraday['High'],
+                #         low=intraday['Low'],
+                #         close=intraday['Close'],
+                #         name='Candles'),
+                #         row=1, col=1)
 
-                    fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Tenkan'],
-                                            line=dict(color='red'), name='Tenkan-sen'),
-                                row=1, col=1)
-                    fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Kijun'],
-                                            line=dict(color='green'), name='Kijun-sen'),
-                                row=1, col=1)
-                    fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanA'],
-                                            line=dict(color='yellow'), name='Span A'),
-                                row=1, col=1)
-                    fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanB'],
-                                            line=dict(color='blue'), name='Span B'),
-                                row=1, col=1)
-                    fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Chikou'],
-                                            line=dict(color='purple'), name='Chikou'),
-                                row=1, col=1)
+                #     fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Tenkan'],
+                #                             line=dict(color='red'), name='Tenkan-sen'),
+                #                 row=1, col=1)
+                #     fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Kijun'],
+                #                             line=dict(color='green'), name='Kijun-sen'),
+                #                 row=1, col=1)
+                #     fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanA'],
+                #                             line=dict(color='yellow'), name='Span A'),
+                #                 row=1, col=1)
+                #     fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanB'],
+                #                             line=dict(color='blue'), name='Span B'),
+                #                 row=1, col=1)
+                #     fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Chikou'],
+                #                             line=dict(color='purple'), name='Chikou'),
+                #                 row=1, col=1)
 
-                    # cloud
-                    fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanA'],
-                                            line=dict(width=0), showlegend=False),
-                                row=1, col=1)
-                    fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanB'],
-                                            fill='tonexty',
-                                            fillcolor='rgba(128,128,128,0.2)',
-                                            line=dict(width=0),
-                                            showlegend=False),
-                                row=1, col=1)
+                #     # cloud
+                #     fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanA'],
+                #                             line=dict(width=0), showlegend=False),
+                #                 row=1, col=1)
+                #     fig.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanB'],
+                #                             fill='tonexty',
+                #                             fillcolor='rgba(128,128,128,0.2)',
+                #                             line=dict(width=0),
+                #                             showlegend=False),
+                #                 row=1, col=1)
 
-                    # ❸ ── volume bars (row 2) ──────────────────────────────────────────
-                    fig.add_trace(go.Bar(
-                        x=intraday['Time'],
-                        y=intraday['Volume'],
-                        marker=dict(opacity=0.5),
-                        name='Volume'),
-                        row=2, col=1)
+                #     # ❸ ── volume bars (row 2) ──────────────────────────────────────────
+                #     fig.add_trace(go.Bar(
+                #         x=intraday['Time'],
+                #         y=intraday['Volume'],
+                #         marker=dict(opacity=0.5),
+                #         name='Volume'),
+                #         row=2, col=1)
 
-                    # ❹ layout tweaks
-                    fig.update_layout(
-                        title="Ichimoku Candlestick Chart + Volume",
-                        xaxis_rangeslider_visible=False,  # rangeslider only once
-                        height=600,
-                        margin=dict(l=30, r=30, t=40, b=20)
-                    )
-                    if 'RVOL_5' in intraday.columns:
-                        # Initialize no markers first
-                        intraday['MarkerColor'] = None
-                        intraday['MarkerLabel'] = None
+                #     # ❹ layout tweaks
+                #     fig.update_layout(
+                #         title="Ichimoku Candlestick Chart + Volume",
+                #         xaxis_rangeslider_visible=False,  # rangeslider only once
+                #         height=600,
+                #         margin=dict(l=30, r=30, t=40, b=20)
+                #     )
+                #     if 'RVOL_5' in intraday.columns:
+                #         # Initialize no markers first
+                #         intraday['MarkerColor'] = None
+                #         intraday['MarkerLabel'] = None
 
-                        # Prioritize higher RVOL first
-                        for thr, color, label in [(1.8, '#ff0000', 'RVOL ≥ 1.8'),
-                                                (1.5, '#ffd700', 'RVOL ≥ 1.5'),
-                                                (1.2, '#ff69b4', 'RVOL ≥ 1.2')]:
-                            mask = (intraday['RVOL_5'] >= thr) & (intraday['MarkerColor'].isna())
-                            intraday.loc[mask, 'MarkerColor'] = color
-                            intraday.loc[mask, 'MarkerLabel'] = label
+                #         # Prioritize higher RVOL first
+                #         for thr, color, label in [(1.8, '#ff0000', 'RVOL ≥ 1.8'),
+                #                                 (1.5, '#ffd700', 'RVOL ≥ 1.5'),
+                #                                 (1.2, '#ff69b4', 'RVOL ≥ 1.2')]:
+                #             mask = (intraday['RVOL_5'] >= thr) & (intraday['MarkerColor'].isna())
+                #             intraday.loc[mask, 'MarkerColor'] = color
+                #             intraday.loc[mask, 'MarkerLabel'] = label
 
-                        # Now plot only once per bar
-                        mask_final = intraday['MarkerColor'].notna()
-                        fig.add_trace(go.Scatter(
-                            x=intraday.loc[mask_final, 'Time'],
-                            y=intraday.loc[mask_final, 'Volume'],
-                            mode='markers',
-                            marker=dict(
-                                symbol='triangle-up',
-                                size=10,
-                                color=intraday.loc[mask_final, 'MarkerColor']
-                            ),
-                            name='RVOL Marker',
-                            customdata=intraday.loc[mask_final, 'RVOL_5'],
-                            hovertemplate='%{x}<br>Vol: %{y}<br>RVOL_5: %{customdata:.2f}',
-                        ), row=2, col=1)
-
-
-
-
-                    # Plot an emoji for detected upper wicks
-                    intraday['UpperWickEmoji'] = intraday['UpperWickFlag'].apply(lambda x: "♟️" if x else "")
-
-                    mask_upperwick = intraday['UpperWickEmoji'] != ""
-
-                    fig.add_trace(go.Scatter(
-                        x=intraday.loc[mask_upperwick, 'Time'],
-                        y=intraday.loc[mask_upperwick, 'High'],
-                        mode='text',
-                        text=intraday.loc[mask_upperwick, 'UpperWickEmoji'],
-                        textposition='top center',
-                        textfont=dict(size=21),
-                        showlegend=False
-                    ), row=1, col=1)
-
-
-                    st.plotly_chart(fig, use_container_width=True)
+                #         # Now plot only once per bar
+                #         mask_final = intraday['MarkerColor'].notna()
+                #         fig.add_trace(go.Scatter(
+                #             x=intraday.loc[mask_final, 'Time'],
+                #             y=intraday.loc[mask_final, 'Volume'],
+                #             mode='markers',
+                #             marker=dict(
+                #                 symbol='triangle-up',
+                #                 size=10,
+                #                 color=intraday.loc[mask_final, 'MarkerColor']
+                #             ),
+                #             name='RVOL Marker',
+                #             customdata=intraday.loc[mask_final, 'RVOL_5'],
+                #             hovertemplate='%{x}<br>Vol: %{y}<br>RVOL_5: %{customdata:.2f}',
+                #         ), row=2, col=1)
 
 
 
-                    # "Time", "Close","Opening Price Signal","OPS Transition","Net Price","Net Price Direction","Bounce","Retrace","BBW_Tight_Emoji",
-                    # "RVOL_5","F% BBW", "Day Type", "High of Day",
-                    # "Low of Day", "F%","TD Open","TD Trap","TD CLoP", "40ish","Tenkan_Kijun_Cross",
-                    # "CTOD Alert","Alert_Kijun","Alert_Mid","Wealth Signal","BBW Alert"
+
+                #     # Plot an emoji for detected upper wicks
+                #     intraday['UpperWickEmoji'] = intraday['UpperWickFlag'].apply(lambda x: "♟️" if x else "")
+
+                #     mask_upperwick = intraday['UpperWickEmoji'] != ""
+
+                #     fig.add_trace(go.Scatter(
+                #         x=intraday.loc[mask_upperwick, 'Time'],
+                #         y=intraday.loc[mask_upperwick, 'High'],
+                #         mode='text',
+                #         text=intraday.loc[mask_upperwick, 'UpperWickEmoji'],
+                #         textposition='top center',
+                #         textfont=dict(size=21),
+                #         showlegend=False
+                #     ), row=1, col=1)
 
 
-                with st.expander("Show/Hide Data Table",  expanded=False):
-                                # Show data table, including new columns
-                    cols_to_show = [
-                                    "Time","RVOL_5","RVOL_Alert","F% Theta", "BBW_Tight_Emoji","BBW Alert","tdSupplyCrossalert", "Kijun_F_Cross","ADX_Alert","STD_Alert","ATR_Exp_Alert","Tenkan_Kijun_Cross","KumoTwistAlert"
-                                ]
+                #     st.plotly_chart(fig, use_container_width=True)
 
-                    st.dataframe(intraday[cols_to_show])
+
+
+                    #"Time", "Close","Opening Price Signal","OPS Transition","Net Price","Net Price Direction","Bounce","Retrace","BBW_Tight_Emoji",
+                    #"RVOL_5","F% BBW", "Day Type", "High of Day",
+                    #"Low of Day", "F%","TD Open","TD Trap","TD CLoP", "40ish","Tenkan_Kijun_Cross",
+                    #"CTOD Alert","Alert_Kijun","Alert_Mid","Wealth Signal","BBW Alert"
+
+
+                # with st.expander("Show/Hide Data Table",  expanded=False):
+                #                 # Show data table, including new columns
+                #     cols_to_show = [
+                #                     "Time","RVOL_5","RVOL_Alert","F% Theta", "BBW_Tight_Emoji","BBW Alert","tdSupplyCrossalert", "Kijun_F_Cross","ADX_Alert","STD_Alert","ATR_Exp_Alert","Tenkan_Kijun_Cross","KumoTwistAlert"
+                #                 ]
+
+                #     st.dataframe(intraday[cols_to_show])
 
                 ticker_tabs = st.tabs(["Interactive F% & Momentum", "Intraday Data Table"])
 
@@ -3279,47 +3259,47 @@ if st.sidebar.button("Run Analysis"):
                     fig.add_trace(scatter_tk_sun, row=1, col=1)
                     fig.add_trace(scatter_tk_moon, row=1, col=1)
 
-                    # # ✅ Yesterday's Open - Grey Dashed Line (F% Scale)
-                    # y_open_f_line = go.Scatter(
-                    #     x=intraday["Time"],
-                    #     y=[intraday["Yesterday Open F%"].iloc[0]] * len(intraday),
-                    #     mode="lines",
-                    #     line=dict(color="grey", dash="dash"),
-                    #     name="Yesterday Open (F%)"
-                    # )
+                    # ✅ Yesterday's Open - Grey Dashed Line (F% Scale)
+                    y_open_f_line = go.Scatter(
+                        x=intraday["Time"],
+                        y=[intraday["Yesterday Open F%"].iloc[0]] * len(intraday),
+                        mode="lines",
+                        line=dict(color="grey", dash="dash"),
+                        name="Yesterday Open (F%)"
+                    )
 
-                    # # ✅ Yesterday's High - Blue Dashed Line (F% Scale)
-                    # y_high_f_line = go.Scatter(
-                    #     x=intraday["Time"],
-                    #     y=[intraday["Yesterday High F%"].iloc[0]] * len(intraday),
-                    #     mode="lines",
-                    #     line=dict(color="green", dash="dash"),
-                    #     name="Yesterday High (F%)"
-                    # )
+                    # ✅ Yesterday's High - Blue Dashed Line (F% Scale)
+                    y_high_f_line = go.Scatter(
+                        x=intraday["Time"],
+                        y=[intraday["Yesterday High F%"].iloc[0]] * len(intraday),
+                        mode="lines",
+                        line=dict(color="green", dash="dash"),
+                        name="Yesterday High (F%)"
+                    )
 
-                    # # ✅ Yesterday's Low - Green Dashed Line (F% Scale)
-                    # y_low_f_line = go.Scatter(
-                    #     x=intraday["Time"],
-                    #     y=[intraday["Yesterday Low F%"].iloc[0]] * len(intraday),
-                    #     mode="lines",
-                    #     line=dict(color="red", dash="dash"),
-                    #     name="Yesterday Low (F%)"
-                    # )
+                    # ✅ Yesterday's Low - Green Dashed Line (F% Scale)
+                    y_low_f_line = go.Scatter(
+                        x=intraday["Time"],
+                        y=[intraday["Yesterday Low F%"].iloc[0]] * len(intraday),
+                        mode="lines",
+                        line=dict(color="red", dash="dash"),
+                        name="Yesterday Low (F%)"
+                    )
 
-                    # # ✅ Yesterday's Close - Red Dashed Line (F% Scale) (Always at 0)
-                    # y_close_f_line = go.Scatter(
-                    #     x=intraday["Time"],
-                    #     y=[0] * len(intraday),
-                    #     mode="lines",
-                    #     line=dict(color="blue", dash="dash"),
-                    #     name="Yesterday Close (F%)"
-                    # )
+                    # ✅ Yesterday's Close - Red Dashed Line (F% Scale) (Always at 0)
+                    y_close_f_line = go.Scatter(
+                        x=intraday["Time"],
+                        y=[0] * len(intraday),
+                        mode="lines",
+                        line=dict(color="blue", dash="dash"),
+                        name="Yesterday Close (F%)"
+                    )
 
-                    # # 🎯 Add all lines to the F% plot
-                    # fig.add_trace(y_open_f_line, row=1, col=1)
-                    # fig.add_trace(y_high_f_line, row=1, col=1)
-                    # fig.add_trace(y_low_f_line, row=1, col=1)
-                    # fig.add_trace(y_close_f_line, row=1, col=1)
+                    # 🎯 Add all lines to the F% plot
+                    fig.add_trace(y_open_f_line, row=1, col=1)
+                    fig.add_trace(y_high_f_line, row=1, col=1)
+                    fig.add_trace(y_low_f_line, row=1, col=1)
+                    fig.add_trace(y_close_f_line, row=1, col=1)
 
 
                   # (D) TD Trap Arrows - Only First Sell TD Trap
@@ -4050,14 +4030,6 @@ if st.sidebar.button("Run Analysis"):
                 )
 
 
-                fig.update_layout(
-                        title=f"{t} – Day Trading Dashboard",
-                        margin=dict(l=30, r=30, t=50, b=30),
-                        height=1500,  # Increase overall figure height (default ~450-600)
-                        width=1600,
-
-                        showlegend=True
-                    )
 
 
                 st.plotly_chart(fig, use_container_width=True)
@@ -4079,54 +4051,52 @@ if st.sidebar.button("Run Analysis"):
 
 
 
-    with st.expander("📆 Daily Chart Overview", expanded=True):
-        try:
-            daily_chart_data = yf.download(t, period="60d", interval="1d", progress=False)
+    # with st.expander("📆 Daily Chart Overview", expanded=True):
+    #     try:
+    #         daily_chart_data = yf.download(t, period="60d", interval="1d", progress=False)
 
-            if not daily_chart_data.empty:
-                # Reset index and ensure proper column names
-                daily_chart_data.reset_index(inplace=True)
-                if isinstance(daily_chart_data.columns, pd.MultiIndex):
-                    daily_chart_data.columns = [col[0] if isinstance(col, tuple) else col for col in daily_chart_data.columns]
+    #         if not daily_chart_data.empty:
+    #             # Reset index and ensure proper column names
+    #             daily_chart_data.reset_index(inplace=True)
+    #             if isinstance(daily_chart_data.columns, pd.MultiIndex):
+    #                 daily_chart_data.columns = [col[0] if isinstance(col, tuple) else col for col in daily_chart_data.columns]
 
-                # Rename 'index' to 'Date' if needed
-                if "Date" not in daily_chart_data.columns:
-                    if "index" in daily_chart_data.columns:
-                        daily_chart_data.rename(columns={"index": "Date"}, inplace=True)
-                    else:
-                        daily_chart_data["Date"] = daily_chart_data.index
+    #             # Rename 'index' to 'Date' if needed
+    #             if "Date" not in daily_chart_data.columns:
+    #                 if "index" in daily_chart_data.columns:
+    #                     daily_chart_data.rename(columns={"index": "Date"}, inplace=True)
+    #                 else:
+    #                     daily_chart_data["Date"] = daily_chart_data.index
 
-                # Ensure datetime format
-                daily_chart_data["Date"] = pd.to_datetime(daily_chart_data["Date"])
+    #             # Ensure datetime format
+    #             daily_chart_data["Date"] = pd.to_datetime(daily_chart_data["Date"])
 
-                # Build Plotly Candlestick chart
-                fig_daily = go.Figure(data=[go.Candlestick(
-                    x=daily_chart_data["Date"],
-                    open=daily_chart_data["Open"],
-                    high=daily_chart_data["High"],
-                    low=daily_chart_data["Low"],
-                    close=daily_chart_data["Close"],
-                    name="Daily"
-                )])
+    #             # Build Plotly Candlestick chart
+    #             fig_daily = go.Figure(data=[go.Candlestick(
+    #                 x=daily_chart_data["Date"],
+    #                 open=daily_chart_data["Open"],
+    #                 high=daily_chart_data["High"],
+    #                 low=daily_chart_data["Low"],
+    #                 close=daily_chart_data["Close"],
+    #                 name="Daily"
+    #             )])
 
-                fig_daily.update_layout(
-                    title=f"{t} – Daily Candlestick Chart (Past 60 Days)",
-                    height=500,
-                    xaxis_rangeslider_visible=False,
-                    margin=dict(l=30, r=30, t=40, b=20)
-                )
-
-
+    #             fig_daily.update_layout(
+    #                 title=f"{t} – Daily Candlestick Chart (Past 60 Days)",
+    #                 height=2000,
+    #                 xaxis_rangeslider_visible=False,
+    #                 margin=dict(l=30, r=30, t=40, b=20)
+    #             )
 
 
 
-                st.plotly_chart(fig_daily, use_container_width=True)
-            else:
-                st.warning("No daily data available.")
-        except Exception as e:
-            st.error(f"Failed to load daily chart for {t}: {e}")
 
 
+    #             st.plotly_chart(fig_daily, use_container_width=True)
+    #         else:
+    #             st.warning("No daily data available.")
+    #     except Exception as e:
+    #         st.error(f"Failed to load daily chart for {t}: {e}")
 
 
 
@@ -4143,49 +4113,51 @@ if st.sidebar.button("Run Analysis"):
 
 
 
-            with st.expander("🕯️ Hidden Candlestick + Ichimoku View", expanded=True):
-                fig_ichimoku = go.Figure()
 
-                fig_ichimoku.add_trace(go.Candlestick(
-                    x=intraday['Time'],
-                    open=intraday['Open'],
-                    high=intraday['High'],
-                    low=intraday['Low'],
-                    close=intraday['Close'],
-                    name='Candles'
-                ))
 
-                fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Tenkan'], line=dict(color='red'), name='Tenkan-sen'))
-                fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Kijun'], line=dict(color='green'), name='Kijun-sen'))
-                fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanA'], line=dict(color='yellow'), name='Span A'))
-                fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanB'], line=dict(color='blue'), name='Span B'))
-                fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Chikou'], line=dict(color='purple'), name='Chikou'))
+        #     with st.expander("🕯️ Hidden Candlestick + Ichimoku View", expanded=True):
+        #         fig_ichimoku = go.Figure()
 
-                fig_ichimoku.add_trace(go.Scatter(
-                    x=intraday['Time'],
-                    y=intraday['SpanA'],
-                    line=dict(width=0),
-                    showlegend=False
-                ))
+        #         fig_ichimoku.add_trace(go.Candlestick(
+        #             x=intraday['Time'],
+        #             open=intraday['Open'],
+        #             high=intraday['High'],
+        #             low=intraday['Low'],
+        #             close=intraday['Close'],
+        #             name='Candles'
+        #         ))
 
-                fig_ichimoku.add_trace(go.Scatter(
-                    x=intraday['Time'],
-                    y=intraday['SpanB'],
-                    fill='tonexty',
-                    fillcolor='rgba(128, 128, 128, 0.2)',
-                    line=dict(width=0),
-                    showlegend=False
-                ))
+        #         fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Tenkan'], line=dict(color='red'), name='Tenkan-sen'))
+        #         fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Kijun'], line=dict(color='green'), name='Kijun-sen'))
+        #         fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanA'], line=dict(color='yellow'), name='Span A'))
+        #         fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['SpanB'], line=dict(color='blue'), name='Span B'))
+        #         fig_ichimoku.add_trace(go.Scatter(x=intraday['Time'], y=intraday['Chikou'], line=dict(color='purple'), name='Chikou'))
 
-                fig_ichimoku.update_layout(
-                    title="Ichimoku Candlestick Chart",
-                    height=450,
-                    width=450,
-                    xaxis_rangeslider_visible=False,
-                    margin=dict(l=30, r=30, t=40, b=20)
-                )
+        #         fig_ichimoku.add_trace(go.Scatter(
+        #             x=intraday['Time'],
+        #             y=intraday['SpanA'],
+        #             line=dict(width=0),
+        #             showlegend=False
+        #         ))
 
-                st.plotly_chart(fig_ichimoku, use_container_width=True)
-        st.write("✅ Ichimoku Expander Rendered")
+        #         fig_ichimoku.add_trace(go.Scatter(
+        #             x=intraday['Time'],
+        #             y=intraday['SpanB'],
+        #             fill='tonexty',
+        #             fillcolor='rgba(128, 128, 128, 0.2)',
+        #             line=dict(width=0),
+        #             showlegend=False
+        #         ))
+
+        #         fig_ichimoku.update_layout(
+        #             title="Ichimoku Candlestick Chart",
+        #             height=450,
+        #             width=450,
+        #             xaxis_rangeslider_visible=False,
+        #             margin=dict(l=30, r=30, t=40, b=20)
+        #         )
+
+        #         st.plotly_chart(fig_ichimoku, use_container_width=True)
+        # st.write("✅ Ichimoku Expander Rendered")
 
 
