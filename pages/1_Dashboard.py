@@ -1090,7 +1090,38 @@ if st.sidebar.button("Run Analysis"):
                         return data
                 intraday = calculate_td_sequential(intraday)
 
+                def detect_king_signal(intraday):
+                        """
+                        Mike becomes King when:
+                        - Buy Queen + F% +20 → 👑
+                        - Sell Queen + F% -20 → 🔻👑
+                        """
+                        intraday["King_Signal"] = ""
 
+                        # Green Kingdom 👑
+                        queen_buy_indices = intraday.index[intraday["Kijun_F_Cross"] == "Buy Kijun Cross"].tolist()
+                        for q_idx in queen_buy_indices:
+                            f_start = intraday.loc[q_idx, "F_numeric"]
+                            for i in range(q_idx + 1, len(intraday)):
+                                f_now = intraday.loc[i, "F_numeric"]
+                                if f_now - f_start >= 20:
+                                    intraday.loc[i, "King_Signal"] = "👑"
+                                    break
+
+                        # Red Kingdom 🔻👑
+                        queen_sell_indices = intraday.index[intraday["Kijun_F_Cross"] == "Sell Kijun Cross"].tolist()
+                        for q_idx in queen_sell_indices:
+                            f_start = intraday.loc[q_idx, "F_numeric"]
+                            for i in range(q_idx + 1, len(intraday)):
+                                f_now = intraday.loc[i, "F_numeric"]
+                                if f_now - f_start <= -20:
+                                    intraday.loc[i, "King_Signal"] = "🔻👑"
+                                    break
+
+                        return intraday
+
+
+                intraday = detect_king_signal(intraday)
 
                 def calculate_td_countdown(data):
                     """
@@ -3176,51 +3207,6 @@ if st.sidebar.button("Run Analysis"):
                 )
                     fig.add_trace(kijun_line, row=1, col=1)
 
-           # 🟢 Wealth Buy & Sell Signals (Plotted with RVOL Color Code)
-                    # -----------------------------------------------------------
-                    mask_buy_signal = intraday["Wealth Signal"].str.contains("Wealth Buy", na=False)
-                    mask_sell_signal = intraday["Wealth Signal"].str.contains("Wealth Sell", na=False)
-
-                    # Determine Wealth Signal colors based on RVOL levels
-                    color_map = {
-                        "red": intraday["RVOL_5"] > 1.8,
-                        "yellow": (intraday["RVOL_5"] >= 1.5) & (intraday["RVOL_5"] < 1.8),
-                        "pink": (intraday["RVOL_5"] >= 1.2) & (intraday["RVOL_5"] < 1.5),
-                    }
-
-                    def assign_color(row):
-                        for color, condition in color_map.items():
-                            if condition.loc[row.name]:  # row.name gives the index
-                                return color
-                        return "black"  # Default if no condition is met
-
-                    # Apply colors to Buy and Sell signals
-                    intraday["Wealth Color"] = intraday.apply(assign_color, axis=1)
-                    scatter_buy_signal = go.Scatter(
-                    x=intraday.loc[mask_buy_signal, "Time"],
-                    y=intraday.loc[mask_buy_signal, "F_numeric"] +55,
-                    mode="text",
-                    text=["♔"] * mask_buy_signal.sum(),            # chess-king symbol
-                    textfont=dict(size=55, color="green"),        # adjust size/color
-                    name="Wealth Buy Signal",
-                    hovertemplate="Time: %{x}<br>F%: %{y}<extra></extra>"
-                )
-
-
-                    scatter_sell_signal = go.Scatter(
-                    x=intraday.loc[mask_sell_signal, "Time"],
-                    y=intraday.loc[mask_sell_signal, "F_numeric"] - 55,
-                    mode="text",
-                    text=["♚"] * mask_sell_signal.sum(),            # chess‐king symbol inverted
-                    textfont=dict(size=55, color="red"),           # adjust size/color
-                    name="Wealth Sell Signal",
-                    hovertemplate="Time: %{x}<br>F%: %{y}<extra></extra>"
-                )
-
-                    fig.add_trace(scatter_buy_signal, row=1, col=1)
-                    fig.add_trace(scatter_sell_signal, row=1, col=1)
-
-
 
 
 
@@ -3252,11 +3238,6 @@ if st.sidebar.button("Run Analysis"):
                         hovertemplate="Time: %{x}<br>F%: %{y}<br>%{text}"
                     )
                     fig.add_trace(scatter_ctod_sell, row=1, col=1)
-
-
-
-
-
 
 
 
@@ -3890,6 +3871,33 @@ if st.sidebar.button("Run Analysis"):
 
 
 
+                    mask_green_king = intraday["King_Signal"] == "👑"
+                    scatter_green_king = go.Scatter(
+                        x=intraday.loc[mask_green_king, "Time"],
+                        y=intraday.loc[mask_green_king, "F_numeric"] + 34,
+                        mode="text",
+                        text=["♔"] * mask_green_king.sum(),
+                        textfont=dict(size=55, color="green"),
+                        name="Green King Signal (♔)",
+                        hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>👑 Green Kingdom Crowned ♔<extra></extra>"
+                    )
+
+
+                    mask_red_king = intraday["King_Signal"] == "🔻👑"
+                    scatter_red_king = go.Scatter(
+                        x=intraday.loc[mask_red_king, "Time"],
+                        y=intraday.loc[mask_red_king, "F_numeric"] - 34,
+                        mode="text",
+                        text=["♔"] * mask_red_king.sum(),
+                        textfont=dict(size=55, color="red"),
+                        name="Red King Signal (♔)",
+                        hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>🔻👑 Red Kingdom Crowned ♔<extra></extra>"
+                    )
+
+
+                    fig.add_trace(scatter_green_king, row=1, col=1)
+                    fig.add_trace(scatter_red_king, row=1, col=1)
+
 
 
 
@@ -3943,35 +3951,6 @@ if st.sidebar.button("Run Analysis"):
 
 
 
-
-                # 🟢 Wealth Buy Signal (♔)
-                mask_buy_signal = intraday["Wealth Signal"].str.contains("Wealth Buy", na=False)
-                mask_sell_signal = intraday["Wealth Signal"].str.contains("Wealth Sell", na=False)
-
-                scatter_buy_signal = go.Scatter(
-                    x=intraday.loc[mask_buy_signal, "Time"],
-                    y=intraday.loc[mask_buy_signal, "F_numeric"]  + 21,
-                    mode="text",
-                    text=["♔"] * mask_buy_signal.sum(),
-                    textfont=dict(size=34, color="green"),
-                    name="Wealth Buy Signal (♔)",
-                    hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>Wealth Buy ♔<extra></extra>"
-                )
-
-
-
-                # 🔴 Wealth Sell Signal (♚)
-                scatter_sell_signal = go.Scatter(
-                    x=intraday.loc[mask_sell_signal, "Time"],
-                    y=intraday.loc[mask_sell_signal, "F_numeric"] - 21,
-                    mode="text",
-                    text=["♚"] * mask_sell_signal.sum(),
-                    textfont=dict(size=34, color="red"),
-                    name="Wealth Sell Signal (♚)",
-                    hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>Wealth Sell ♚<extra></extra>"
-                )
-                fig.add_trace(scatter_buy_signal, row=1, col=1)
-                fig.add_trace(scatter_sell_signal, row=1, col=1)
 
                 # Mask for each horse
                 mask_horse_buy = intraday["Kijun_Cross_Horse"] == "♘"
