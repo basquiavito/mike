@@ -870,6 +870,116 @@ if st.sidebar.button("Run Analysis"):
                 # Apply to intraday dataset
                 intraday = calculate_f_tenkan(intraday, period=9)
 
+
+
+   # Step 1: Calculate OBV
+                def calculate_obv(df):
+                    df["OBV"] = 0  # Initialize OBV column
+                    df["OBV"] = np.where(df["Close"] > df["Close"].shift(1), df["Volume"],
+                                        np.where(df["Close"] < df["Close"].shift(1), -df["Volume"], 0)).cumsum()
+
+                    # Normalize OBV to be in hundreds instead of thousands
+                    df["OBV"] = df["OBV"] / 10000
+
+                    return df
+
+                # Step 2: Detect OBV Crossovers
+                def detect_obv_crossovers(df):
+                    df["OBV_Crossover"] = ""
+
+                    for i in range(1, len(df)):
+                        prev_obv = df.loc[i - 1, "OBV"]
+                        curr_obv = df.loc[i, "OBV"]
+
+                        if prev_obv < 0 and curr_obv >= 0:
+                            df.loc[i, "OBV_Crossover"] = "🔈"  # Speaker (Bullish Volume Shift)
+                        elif prev_obv > 0 and curr_obv <= 0:
+                            df.loc[i, "OBV_Crossover"] = "🔇"  # Muted Speaker (Bearish Volume Weakness)
+
+                    return df
+
+                # Apply OBV & Crossover Detection
+                intraday = calculate_obv(intraday)
+                intraday = detect_obv_crossovers(intraday)
+
+                def calculate_f_theta(df, scale_factor=100):
+                    """
+                    Computes tan(theta) of F% to detect sharp movements.
+                    Formula: tan(theta) = F% change (approximate slope)
+                    Scales result by scale_factor (default 100).
+                    """
+                    if "F_numeric" in df.columns:
+                        df["F% Theta"] = np.degrees(np.arctan(df["F_numeric"].diff())) * scale_factor
+                    else:
+                        df["F% Theta"] = 0  # Fallback if column is missing
+                    return df
+
+                # Apply function after calculating F_numeric
+                intraday = calculate_f_theta(intraday, scale_factor=100)  # Adjust scale_factor if needed
+
+                def detect_theta_spikes(df):
+                    """
+                    Identifies large spikes in F% Theta automatically using standard deviation.
+                    - Uses 2.5x standard deviation as a dynamic threshold.
+                    - Detects both positive and negative spikes.
+                    """
+                    if "F% Theta" not in df.columns:
+                        return df  # Avoid crash if missing column
+
+                    theta_std = df["F% Theta"].std()  # Compute stock-specific volatility
+                    threshold = 2 * theta_std  # Set dynamic threshold
+
+                    df["Theta_Change"] = df["F% Theta"].diff()  # Compute directional change
+                    df["Theta_Spike"] = df["Theta_Change"].abs() > threshold  # Detect both up/down spikes
+
+                    return df
+                intraday = detect_theta_spikes(intraday)
+
+
+
+
+
+                def calculate_f_velocity_and_speed(df):
+                    """
+                    Computes:
+                    - **F% Velocity** = directional rate of F% change per bar.
+                    - **F% Speed** = absolute rate of F% change per bar (ignores direction).
+                    """
+                    if "F_numeric" in df.columns:
+                        df["F% Velocity"] = df["F_numeric"].diff()  # Includes direction (+/-)
+                        df["F% Speed"] = df["F% Velocity"].abs()    # Only magnitude, no direction
+                    else:
+                        df["F% Velocity"] = 0  # Fallback
+                        df["F% Speed"] = 0      # Fallback
+                    return df
+
+                # Apply function after calculating F_numeric
+                intraday = calculate_f_velocity_and_speed(intraday)
+
+
+                def calculate_f_theta_cot(df, scale_factor=100):
+                    """
+                    Computes tan(theta) and cot(theta) of F% to detect sharp movements.
+                    - tan(theta) = slope of F% movement
+                    - cot(theta) = inverse of tan(theta) (sensitive to small changes)
+                    - Results are scaled by `scale_factor` for readability.
+                    """
+                    if "F_numeric" in df.columns:
+                        df["F% Theta"] = np.tan(np.radians(df["F_numeric"].diff())) * scale_factor
+
+                        # Avoid division by zero
+                        df["F% Cotangent"] = np.where(df["F% Theta"] != 0, 1 / df["F% Theta"], 0)
+                    else:
+                        df["F% Theta"] = 0  # Fallback
+                        df["F% Cotangent"] = 0  # Fallback
+                    return df
+
+                # Apply function after calculating F_numeric
+                intraday = calculate_f_theta_cot(intraday, scale_factor=100)
+
+
+
+
                 def detect_f_tenkan_cross(df):
                     """
                     Detects F% Tenkan crosses over F% Kijun.
@@ -1029,6 +1139,31 @@ if st.sidebar.button("Run Analysis"):
 
                 intraday = calculate_td_countdown(intraday)
 
+
+
+
+
+                def calculate_vas(data, signal_col="F_numeric", volatility_col="ATR", period=14):
+                    """
+                    Computes Volatility Adjusted Score (VAS) using the given signal and volatility measure.
+                    Default: F% as signal, ATR as volatility.
+                    """
+                    if volatility_col == "ATR":
+                        data["ATR"] = data["High"].rolling(window=period).max() - data["Low"].rolling(window=period).min()
+
+                    elif volatility_col == "MAD":
+                        data["MAD"] = data["Close"].rolling(window=period).apply(lambda x: np.mean(np.abs(x - x.mean())), raw=True)
+
+                    elif volatility_col == "STD":
+                        data["STD"] = data["Close"].rolling(window=period).std()
+
+                    # Compute VAS using selected volatility measure
+                    selected_vol = data[volatility_col].fillna(method="bfill")  # Avoid NaN errors
+                    data["VAS"] = data[signal_col] / selected_vol
+                    return data
+
+                # Apply function to intraday data (defaulting to ATR)
+                intraday = calculate_vas(intraday, signal_col="F_numeric", volatility_col="ATR", period=14)
                 def calculate_tenkan_sen(df, period=9):
                     """
                     Computes Tenkan-sen for F% based on the midpoint of high/low over a rolling period.
@@ -3937,6 +4072,43 @@ if st.sidebar.button("Run Analysis"):
                 fig.add_trace(scatter_rook_up, row=1, col=1)
                 fig.add_trace(scatter_rook_down, row=1, col=1)
 
+                    # 1) build Boolean masks (you can tighten with a small buffer if you like)
+                upper_tag = intraday["F_numeric"] >= intraday["F% Upper"]
+                lower_tag = intraday["F_numeric"] <= intraday["F% Lower"]
+
+                # 2) scatter for upper‑band tags
+                fig.add_trace(
+                    go.Scatter(
+                        x=intraday.loc[upper_tag, "Time"],
+                        y=intraday.loc[upper_tag, "F_numeric"] +13,       # nudge up a bit
+                        mode="text",
+                        text=["🏷️"] * upper_tag.sum(),
+                        textposition="top center",
+                        textfont=dict(size=18),
+                        name="BB Upper Tag (🏷️)",
+                        hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>Tagged Upper Band<extra></extra>"
+                    ),
+                    row=1, col=1
+                )
+
+                # 3) scatter for lower‑band tags
+                fig.add_trace(
+                    go.Scatter(
+                        x=intraday.loc[lower_tag, "Time"],
+                        y=intraday.loc[lower_tag, "F_numeric"] - 13,       # nudge down a bit
+                        mode="text",
+                        text=["🏷️"] * lower_tag.sum(),
+                        textposition="bottom center",
+                        textfont=dict(size=18),
+                        name="BB Lower Tag (🏷️)",
+                        hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>Tagged Lower Band<extra></extra>"
+                    ),
+                    row=1, col=1
+                )
+
+
+
+
 
                 # correct masks
                 mask_pawn_up   = intraday["Tenkan_Pawn"] == "♙"
@@ -4028,6 +4200,219 @@ if st.sidebar.button("Run Analysis"):
                     name="Delayed Short Entry (☑️)",
                     hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>☑️ Delayed Short Entry<extra></extra>"
                 )
+
+
+
+                # ✅ Yesterday's Open - Grey Dashed Line (F% Scale)
+                y_open_f_line = go.Scatter(
+                    x=intraday["Time"],
+                    y=[intraday["Yesterday Open F%"].iloc[0]] * len(intraday),
+                    mode="lines",
+                    line=dict(color="grey", dash="dash"),
+                    name="Yesterday Open (F%)"
+                )
+
+                # ✅ Yesterday's High - Blue Dashed Line (F% Scale)
+                y_high_f_line = go.Scatter(
+                    x=intraday["Time"],
+                    y=[intraday["Yesterday High F%"].iloc[0]] * len(intraday),
+                    mode="lines",
+                    line=dict(color="green", dash="dash"),
+                    name="Yesterday High (F%)"
+                )
+
+                # ✅ Yesterday's Low - Green Dashed Line (F% Scale)
+                y_low_f_line = go.Scatter(
+                    x=intraday["Time"],
+                    y=[intraday["Yesterday Low F%"].iloc[0]] * len(intraday),
+                    mode="lines",
+                    line=dict(color="red", dash="dash"),
+                    name="Yesterday Low (F%)"
+                )
+
+                # ✅ Yesterday's Close - Red Dashed Line (F% Scale) (Always at 0)
+                y_close_f_line = go.Scatter(
+                    x=intraday["Time"],
+                    y=[0] * len(intraday),
+                    mode="lines",
+                    line=dict(color="blue", dash="dash"),
+                    name="Yesterday Close (F%)"
+                )
+
+
+                # Add to F% plot
+                mask_ops_bear = intraday["OPS Transition"] == "🐻"
+                mask_ops_panda = intraday["OPS Transition"] == "🐼"
+
+                scatter_ops_bear = go.Scatter(
+                    x=intraday.loc[mask_ops_bear, "Time"],
+                    y=intraday.loc[mask_ops_bear, "F_numeric"] - 7,  # Offset to avoid overlap
+                    mode="text",
+                    text="🐻",
+                    textposition="bottom center",
+                    textfont=dict(size=22, color="red"),
+                    name="OPS Bearish Flip",
+                    hovertemplate="Time: %{x}<br>F%: %{y}<br>OPS Turned Bearish<extra></extra>"
+                )
+
+                scatter_ops_panda = go.Scatter(
+                    x=intraday.loc[mask_ops_panda, "Time"],
+                    y=intraday.loc[mask_ops_panda, "F_numeric"] + 7,  # Offset to avoid overlap
+                    mode="text",
+                    text="🐼",
+                    textposition="top center",
+                    textfont=dict(size=22, color="green"),
+                    name="OPS Bullish Flip",
+                    hovertemplate="Time: %{x}<br>F%: %{y}<br>OPS Turned Bullish<extra></extra>"
+                )
+
+                # Add to the F% plot
+                fig.add_trace(scatter_ops_bear, row=1, col=1)
+                fig.add_trace(scatter_ops_panda, row=1, col=1)
+
+
+#*******************************************************************************************************************************************************************************
+
+#  Cotangent Spikes (Skull 💀) - Catches both >3 and <-3
+                mask_cotangent_spike = intraday["F% Cotangent"].abs() > 3
+
+
+                scatter_cotangent_spike = go.Scatter(
+                    x=intraday.loc[mask_cotangent_spike, "Time"],
+                    y=intraday.loc[mask_cotangent_spike, "F_numeric"] - 89,  # Slightly offset for visibility
+                    mode="text",
+                    text="💀",
+                    textposition="top center",
+                    textfont=dict(size=18),  # Larger for emphasis
+                    name="Cotangent Spike",
+                    hovertext=intraday.loc[mask_cotangent_spike, "F% Cotangent"].round(2),  # Display rounded cotangent value
+                    hovertemplate="Time: %{x}<br>F%: %{y}<br>Cotangent: %{hovertext}<extra></extra>"
+                )
+
+    # Add to the F% plot (Row 1)
+                fig.add_trace(scatter_cotangent_spike, row=1, col=1)
+
+#-------------------------------------------------------------------------------------
+
+    #  Cosecant Spikes (Lightning ⚡) - Detects |F% Cosecant| > 20
+                mask_cosecant_spike = intraday["F% Cosecant"].abs() > 20
+
+                scatter_cosecant_spike = go.Scatter(
+                    x=intraday.loc[mask_cosecant_spike, "Time"],
+                    y=intraday.loc[mask_cosecant_spike, "F_numeric"] + 20,  # Offset for visibility
+                    mode="text",
+                    text="⚡",
+                    textposition="top center",
+                    textfont=dict(size=18, color="orange"),  # Larger and orange for emphasis
+                    name="Cosecant Spike",
+                    hovertext=intraday.loc[mask_cosecant_spike, "F% Cosecant"].round(2),  # Display rounded cosecant value
+                    hovertemplate="Time: %{x}<br>F%: %{y}<br>Cosecant: %{hovertext}<extra></extra>"
+                )
+
+                # Add to the F% plot (Row 1)
+                fig.add_trace(scatter_cosecant_spike, row=1, col=1)
+
+
+
+#---------------------------------------------------------------------------------------
+
+
+
+
+
+                # 🔵 Secant Spikes (Tornado 🌪) - Detects |F% Secant| > 3
+                mask_secant_spike = intraday["F% Secant"].abs() > 5
+
+                scatter_secant_spike = go.Scatter(
+                    x=intraday.loc[mask_secant_spike, "Time"],
+                    y=intraday.loc[mask_secant_spike, "F_numeric"] + 20,  # Offset for visibility
+                    mode="text",
+                    text="🌪",
+                    textposition="top center",
+                    textfont=dict(size=18, color="blue"),  # Large and blue for emphasis
+                    name="Secant Spike",
+                    hovertext=intraday.loc[mask_secant_spike, "F% Secant"].round(2),  # Display rounded secant value
+                    hovertemplate="Time: %{x}<br>F%: %{y}<br>Secant: %{hovertext}<extra></extra>"
+                )
+
+                # Add to the F% plot (Row 1)
+                fig.add_trace(scatter_secant_spike, row=1, col=1)
+
+#  TRIGONOMETRIC COTAGENT / SECANT / TENKAN
+#**************************************************************************************************************************************************************************
+
+
+
+                # 🎯 Add all lines to the F% plot
+                fig.add_trace(y_open_f_line, row=1, col=1)
+                fig.add_trace(y_high_f_line, row=1, col=1)
+                fig.add_trace(y_low_f_line, row=1, col=1)
+                fig.add_trace(y_close_f_line, row=1, col=1)
+
+
+
+
+
+                # 1. Calculate 1.618x Fib targets for both TD lines
+                intraday["Supply_Target"] = intraday["TD Supply Line F"] * 1.618
+                intraday["Demand_Target"] = intraday["TD Demand Line F"] * 1.618
+
+                # 2. Check if both F_numeric and the corresponding TD line confirm the breakout
+                bullish_mask = (intraday["F_numeric"] > intraday["Supply_Target"]) & (intraday["TD Supply Line F"] > 0)
+                bearish_mask = (intraday["F_numeric"] < intraday["Demand_Target"]) & (intraday["TD Demand Line F"] < 0)
+
+                # 3. Add emojis to the plot
+                fig.add_trace(go.Scatter(
+                    x=intraday.loc[bullish_mask, "Time"],
+                    y=intraday.loc[bullish_mask, "F_numeric"] + 144,
+                    mode="text",
+                    text=["🏝️"] * bullish_mask.sum(),
+                    textposition="top center",
+                    textfont=dict(size=34),
+                    name="Bullish Fib Target (🏝️)",
+                    hovertemplate="Time: %{x}<br>F%: %{y}<br>Breakout above Fib Target<extra></extra>"
+                ))
+
+                fig.add_trace(go.Scatter(
+                    x=intraday.loc[bearish_mask, "Time"],
+                    y=intraday.loc[bearish_mask, "F_numeric"] - 143,
+                    mode="text",
+                    text=["🌋"] * bearish_mask.sum(),
+                    textposition="bottom center",
+                    textfont=dict(size=21),
+                    name="Bearish Fib Target (🌋)",
+                    hovertemplate="Time: %{x}<br>F%: %{y}<br>Breakdown below Fib Target<extra></extra>"
+                ))
+                # 🏇 Mike rides real VWAP up
+                mask_vwap_up = intraday["VWAP_Cross_Emoji"] == "🥁"
+                scatter_vwap_up = go.Scatter(
+                    x=intraday.loc[mask_vwap_up, "Time"],
+                    y=intraday.loc[mask_vwap_up, "F_numeric"] +64,
+                    mode="text",
+                    text="🏇",
+                    textposition="top center",
+                    textfont=dict(size=55, color="blue"),
+                    name="Mike Rides VWAP 🏇",
+                    hovertemplate="Time: %{x}<br>F%: %{y}<br>True Bullish VWAP Cross 🏇<extra></extra>"
+                )
+
+                # 🎠 Carousel fake-out (bearish VWAP cross)
+                mask_vwap_down = intraday["VWAP_Cross_Emoji"] == "🎻"
+                scatter_vwap_down = go.Scatter(
+                    x=intraday.loc[mask_vwap_down, "Time"],
+                    y=intraday.loc[mask_vwap_down, "F_numeric"] - 64,
+                    mode="text",
+                    text="🎠",
+                    textposition="bottom center",
+                    textfont=dict(size=55, color="deeppink"),
+                    name="Carousel Trap 🎠",
+                    hovertemplate="Time: %{x}<br>F%: %{y}<br>Bearish VWAP Cross — Carousel Trap 🎠<extra></extra>"
+                )
+
+                fig.add_trace(scatter_vwap_up, row=1, col=1)
+                fig.add_trace(scatter_vwap_down, row=1, col=1)
+
+
 
 
 
