@@ -3411,12 +3411,6 @@ if st.sidebar.button("Run Analysis"):
                         name="Yesterday Close (F%)"
                     )
 
-                    # 🎯 Add all lines to the F% plot
-                    fig.add_trace(y_open_f_line, row=1, col=1)
-                    fig.add_trace(y_high_f_line, row=1, col=1)
-                    fig.add_trace(y_low_f_line, row=1, col=1)
-                    fig.add_trace(y_close_f_line, row=1, col=1)
-
 
                   # (D) TD Trap Arrows - Only First Sell TD Trap
                     # ----------------------------------------------
@@ -3438,15 +3432,6 @@ if st.sidebar.button("Run Analysis"):
                             arrowcolor="yellow",
                             font=dict(size=12, color="red", family="Arial Black"),
                         )
-
-                    # Update layout overall
-                    fig.update_layout(
-                        title=f"{t} – Pure Demark",
-                        margin=dict(l=30, r=30, t=50, b=30),
-                        height=1580,  # Increase overall figure height (default ~450-600)
-
-                        showlegend=True
-                    )
 
                     fig.update_xaxes(title_text="Time", row=1, col=1)
                     fig.update_yaxes(title_text="F% Scale", row=1, col=1)
@@ -3874,7 +3859,7 @@ if st.sidebar.button("Run Analysis"):
                     mask_green_king = intraday["King_Signal"] == "👑"
                     scatter_green_king = go.Scatter(
                         x=intraday.loc[mask_green_king, "Time"],
-                        y=intraday.loc[mask_green_king, "F_numeric"] + 34,
+                        y=intraday.loc[mask_green_king, "F_numeric"] + 89,
                         mode="text",
                         text=["♔"] * mask_green_king.sum(),
                         textfont=dict(size=55, color="green"),
@@ -3886,7 +3871,7 @@ if st.sidebar.button("Run Analysis"):
                     mask_red_king = intraday["King_Signal"] == "🔻👑"
                     scatter_red_king = go.Scatter(
                         x=intraday.loc[mask_red_king, "Time"],
-                        y=intraday.loc[mask_red_king, "F_numeric"] - 34,
+                        y=intraday.loc[mask_red_king, "F_numeric"] - 89,
                         mode="text",
                         text=["♔"] * mask_red_king.sum(),
                         textfont=dict(size=55, color="red"),
@@ -3922,7 +3907,7 @@ if st.sidebar.button("Run Analysis"):
                     # Upward Cross Trace (♕)
                     up_cross_trace = go.Scatter(
                         x=intraday.loc[mask_kijun_up, "Time"],
-                        y=intraday.loc[mask_kijun_up, "F_numeric"] + 34,  # Offset upward (adjust as needed)
+                        y=intraday.loc[mask_kijun_up, "F_numeric"] + 55,  # Offset upward (adjust as needed)
                         mode="text",
                         text=intraday.loc[mask_kijun_up, "Kijun_F_Cross_Emoji"],
                         textposition="top center",  # Positioned above the point
@@ -3934,7 +3919,7 @@ if st.sidebar.button("Run Analysis"):
                     # Downward Cross Trace (♛)
                     down_cross_trace = go.Scatter(
                         x=intraday.loc[mask_kijun_down, "Time"],
-                        y=intraday.loc[mask_kijun_down, "F_numeric"] - 34,  # Offset downward
+                        y=intraday.loc[mask_kijun_down, "F_numeric"] - 55,  # Offset downward
                         mode="text",
                         text=intraday.loc[mask_kijun_down, "Kijun_F_Cross_Emoji"],
                         textposition="bottom center",  # Positioned below the point
@@ -4182,41 +4167,6 @@ if st.sidebar.button("Run Analysis"):
 
 
 
-                # ✅ Yesterday's Open - Grey Dashed Line (F% Scale)
-                y_open_f_line = go.Scatter(
-                    x=intraday["Time"],
-                    y=[intraday["Yesterday Open F%"].iloc[0]] * len(intraday),
-                    mode="lines",
-                    line=dict(color="grey", dash="dash"),
-                    name="Yesterday Open (F%)"
-                )
-
-                # ✅ Yesterday's High - Blue Dashed Line (F% Scale)
-                y_high_f_line = go.Scatter(
-                    x=intraday["Time"],
-                    y=[intraday["Yesterday High F%"].iloc[0]] * len(intraday),
-                    mode="lines",
-                    line=dict(color="green", dash="dash"),
-                    name="Yesterday High (F%)"
-                )
-
-                # ✅ Yesterday's Low - Green Dashed Line (F% Scale)
-                y_low_f_line = go.Scatter(
-                    x=intraday["Time"],
-                    y=[intraday["Yesterday Low F%"].iloc[0]] * len(intraday),
-                    mode="lines",
-                    line=dict(color="red", dash="dash"),
-                    name="Yesterday Low (F%)"
-                )
-
-                # ✅ Yesterday's Close - Red Dashed Line (F% Scale) (Always at 0)
-                y_close_f_line = go.Scatter(
-                    x=intraday["Time"],
-                    y=[0] * len(intraday),
-                    mode="lines",
-                    line=dict(color="blue", dash="dash"),
-                    name="Yesterday Close (F%)"
-                )
 
 
                 # Add to F% plot
@@ -4366,7 +4316,7 @@ if st.sidebar.button("Run Analysis"):
                 mask_vwap_up = intraday["VWAP_Cross_Emoji"] == "🥁"
                 scatter_vwap_up = go.Scatter(
                     x=intraday.loc[mask_vwap_up, "Time"],
-                    y=intraday.loc[mask_vwap_up, "F_numeric"] +64,
+                    y=intraday.loc[mask_vwap_up, "F_numeric"] +89,
                     mode="text",
                     text="🏇",
                     textposition="top center",
@@ -4379,7 +4329,7 @@ if st.sidebar.button("Run Analysis"):
                 mask_vwap_down = intraday["VWAP_Cross_Emoji"] == "🎻"
                 scatter_vwap_down = go.Scatter(
                     x=intraday.loc[mask_vwap_down, "Time"],
-                    y=intraday.loc[mask_vwap_down, "F_numeric"] - 64,
+                    y=intraday.loc[mask_vwap_down, "F_numeric"] - 89,
                     mode="text",
                     text="🎠",
                     textposition="bottom center",
@@ -4391,6 +4341,15 @@ if st.sidebar.button("Run Analysis"):
                 fig.add_trace(scatter_vwap_up, row=1, col=1)
                 fig.add_trace(scatter_vwap_down, row=1, col=1)
 
+
+                # Update layout overall
+                fig.update_layout(
+                    title=f"{t} – Pure Demark",
+                    margin=dict(l=30, r=30, t=50, b=30),
+                    height=2080,  # Increase overall figure height (default ~450-600)
+
+                    showlegend=True
+                )
 
 
 
