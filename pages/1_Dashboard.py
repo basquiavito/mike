@@ -4162,8 +4162,8 @@ if st.sidebar.button("Run Analysis"):
                 #     textposition="bottom center",
                 #     textfont=dict(size=13, color="red"),
                 #     name="Delayed Short Entry (☑️)",
-                #     hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>☑️ Delayed Short Entry<extra></extra>"
-                )
+                # #     hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>☑️ Delayed Short Entry<extra></extra>"
+                # )
 
 
 
