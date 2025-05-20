@@ -3166,35 +3166,35 @@ if st.sidebar.button("Run Analysis"):
                     # Filter first occurrence and changes
                     chikou_shift_mask = intraday["Chikou_Change"] & (intraday["Chikou_Position"] != "equal")
 
-                    # Assign emojis for only these changes
-                    intraday["Chikou_Emoji"] = np.where(intraday["Chikou_Position"] == "above", "👨🏻‍✈️",
-                                                np.where(intraday["Chikou_Position"] == "below", "👮🏻‍♂️", ""))
+                    # # Assign emojis for only these changes
+                    # intraday["Chikou_Emoji"] = np.where(intraday["Chikou_Position"] == "above", "👨🏻‍✈️",
+                    #                             np.where(intraday["Chikou_Position"] == "below", "👮🏻‍♂️", ""))
 
-                    mask_chikou_above = chikou_shift_mask & (intraday["Chikou_Position"] == "above")
+                    # mask_chikou_above = chikou_shift_mask & (intraday["Chikou_Position"] == "above")
 
-                    fig.add_trace(go.Scatter(
-                        x=intraday.loc[mask_chikou_above, "Time"],
-                        y=intraday.loc[mask_chikou_above, "F_numeric"] + 55,
-                        mode="text",
-                        text=["👨🏻‍✈️"] * mask_chikou_above.sum(),
-                        textposition="top center",
-                        textfont=dict(size=34),
-                        name="Chikou Above Price",
-                        hovertemplate="Time: %{x}<br>F%: %{y}<br>Chikou moved above<extra></extra>"
-                    ), row=1, col=1)
+                    # fig.add_trace(go.Scatter(
+                    #     x=intraday.loc[mask_chikou_above, "Time"],
+                    #     y=intraday.loc[mask_chikou_above, "F_numeric"] + 55,
+                    #     mode="text",
+                    #     text=["👨🏻‍✈️"] * mask_chikou_above.sum(),
+                    #     textposition="top center",
+                    #     textfont=dict(size=34),
+                    #     name="Chikou Above Price",
+                    #     hovertemplate="Time: %{x}<br>F%: %{y}<br>Chikou moved above<extra></extra>"
+                    # ), row=1, col=1)
 
-                    mask_chikou_below = chikou_shift_mask & (intraday["Chikou_Position"] == "below")
+                    # mask_chikou_below = chikou_shift_mask & (intraday["Chikou_Position"] == "below")
 
-                    fig.add_trace(go.Scatter(
-                        x=intraday.loc[mask_chikou_below, "Time"],
-                        y=intraday.loc[mask_chikou_below, "F_numeric"] - 55,
-                        mode="text",
-                        text=["👮🏿‍♂️"] * mask_chikou_below.sum(),
-                        textposition="bottom center",
-                        textfont=dict(size=34),
-                        name="Chikou Below Price",
-                        hovertemplate="Time: %{x}<br>F%: %{y}<br>Chikou moved below<extra></extra>"
-                    ), row=1, col=1)
+                    # fig.add_trace(go.Scatter(
+                    #     x=intraday.loc[mask_chikou_below, "Time"],
+                    #     y=intraday.loc[mask_chikou_below, "F_numeric"] - 55,
+                    #     mode="text",
+                    #     text=["👮🏿‍♂️"] * mask_chikou_below.sum(),
+                    #     textposition="bottom center",
+                    #     textfont=dict(size=34),
+                    #     name="Chikou Below Price",
+                    #     hovertemplate="Time: %{x}<br>F%: %{y}<br>Chikou moved below<extra></extra>"
+                    # ), row=1, col=1)
 
 
 
@@ -4036,39 +4036,39 @@ if st.sidebar.button("Run Analysis"):
                 fig.add_trace(scatter_rook_up, row=1, col=1)
                 fig.add_trace(scatter_rook_down, row=1, col=1)
 
-                    # 1) build Boolean masks (you can tighten with a small buffer if you like)
-                upper_tag = intraday["F_numeric"] >= intraday["F% Upper"]
-                lower_tag = intraday["F_numeric"] <= intraday["F% Lower"]
+                #     # 1) build Boolean masks (you can tighten with a small buffer if you like)
+                # upper_tag = intraday["F_numeric"] >= intraday["F% Upper"]
+                # lower_tag = intraday["F_numeric"] <= intraday["F% Lower"]
 
-                # 2) scatter for upper‑band tags
-                fig.add_trace(
-                    go.Scatter(
-                        x=intraday.loc[upper_tag, "Time"],
-                        y=intraday.loc[upper_tag, "F_numeric"] +13,       # nudge up a bit
-                        mode="text",
-                        text=["🏷️"] * upper_tag.sum(),
-                        textposition="top center",
-                        textfont=dict(size=18),
-                        name="BB Upper Tag (🏷️)",
-                        hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>Tagged Upper Band<extra></extra>"
-                    ),
-                    row=1, col=1
-                )
+                # # 2) scatter for upper‑band tags
+                # fig.add_trace(
+                #     go.Scatter(
+                #         x=intraday.loc[upper_tag, "Time"],
+                #         y=intraday.loc[upper_tag, "F_numeric"] +13,       # nudge up a bit
+                #         mode="text",
+                #         text=["🏷️"] * upper_tag.sum(),
+                #         textposition="top center",
+                #         textfont=dict(size=18),
+                #         name="BB Upper Tag (🏷️)",
+                #         hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>Tagged Upper Band<extra></extra>"
+                #     ),
+                #     row=1, col=1
+                # )
 
-                # 3) scatter for lower‑band tags
-                fig.add_trace(
-                    go.Scatter(
-                        x=intraday.loc[lower_tag, "Time"],
-                        y=intraday.loc[lower_tag, "F_numeric"] - 13,       # nudge down a bit
-                        mode="text",
-                        text=["🏷️"] * lower_tag.sum(),
-                        textposition="bottom center",
-                        textfont=dict(size=18),
-                        name="BB Lower Tag (🏷️)",
-                        hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>Tagged Lower Band<extra></extra>"
-                    ),
-                    row=1, col=1
-                )
+                # # 3) scatter for lower‑band tags
+                # fig.add_trace(
+                #     go.Scatter(
+                #         x=intraday.loc[lower_tag, "Time"],
+                #         y=intraday.loc[lower_tag, "F_numeric"] - 13,       # nudge down a bit
+                #         mode="text",
+                #         text=["🏷️"] * lower_tag.sum(),
+                #         textposition="bottom center",
+                #         textfont=dict(size=18),
+                #         name="BB Lower Tag (🏷️)",
+                #         hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>Tagged Lower Band<extra></extra>"
+                #     ),
+                #     row=1, col=1
+                # )
 
 
 
@@ -4282,36 +4282,36 @@ if st.sidebar.button("Run Analysis"):
 
 
 
-                # 1. Calculate 1.618x Fib targets for both TD lines
-                intraday["Supply_Target"] = intraday["TD Supply Line F"] * 1.618
-                intraday["Demand_Target"] = intraday["TD Demand Line F"] * 1.618
+                # # 1. Calculate 1.618x Fib targets for both TD lines
+                # intraday["Supply_Target"] = intraday["TD Supply Line F"] * 1.618
+                # intraday["Demand_Target"] = intraday["TD Demand Line F"] * 1.618
 
-                # 2. Check if both F_numeric and the corresponding TD line confirm the breakout
-                bullish_mask = (intraday["F_numeric"] > intraday["Supply_Target"]) & (intraday["TD Supply Line F"] > 0)
-                bearish_mask = (intraday["F_numeric"] < intraday["Demand_Target"]) & (intraday["TD Demand Line F"] < 0)
+                # # 2. Check if both F_numeric and the corresponding TD line confirm the breakout
+                # bullish_mask = (intraday["F_numeric"] > intraday["Supply_Target"]) & (intraday["TD Supply Line F"] > 0)
+                # bearish_mask = (intraday["F_numeric"] < intraday["Demand_Target"]) & (intraday["TD Demand Line F"] < 0)
 
-                # 3. Add emojis to the plot
-                fig.add_trace(go.Scatter(
-                    x=intraday.loc[bullish_mask, "Time"],
-                    y=intraday.loc[bullish_mask, "F_numeric"] + 144,
-                    mode="text",
-                    text=["🏝️"] * bullish_mask.sum(),
-                    textposition="top center",
-                    textfont=dict(size=34),
-                    name="Bullish Fib Target (🏝️)",
-                    hovertemplate="Time: %{x}<br>F%: %{y}<br>Breakout above Fib Target<extra></extra>"
-                ))
+                # # 3. Add emojis to the plot
+                # fig.add_trace(go.Scatter(
+                #     x=intraday.loc[bullish_mask, "Time"],
+                #     y=intraday.loc[bullish_mask, "F_numeric"] + 144,
+                #     mode="text",
+                #     text=["🏝️"] * bullish_mask.sum(),
+                #     textposition="top center",
+                #     textfont=dict(size=34),
+                #     name="Bullish Fib Target (🏝️)",
+                #     hovertemplate="Time: %{x}<br>F%: %{y}<br>Breakout above Fib Target<extra></extra>"
+                # ))
 
-                fig.add_trace(go.Scatter(
-                    x=intraday.loc[bearish_mask, "Time"],
-                    y=intraday.loc[bearish_mask, "F_numeric"] - 143,
-                    mode="text",
-                    text=["🌋"] * bearish_mask.sum(),
-                    textposition="bottom center",
-                    textfont=dict(size=21),
-                    name="Bearish Fib Target (🌋)",
-                    hovertemplate="Time: %{x}<br>F%: %{y}<br>Breakdown below Fib Target<extra></extra>"
-                ))
+                # fig.add_trace(go.Scatter(
+                #     x=intraday.loc[bearish_mask, "Time"],
+                #     y=intraday.loc[bearish_mask, "F_numeric"] - 143,
+                #     mode="text",
+                #     text=["🌋"] * bearish_mask.sum(),
+                #     textposition="bottom center",
+                #     textfont=dict(size=21),
+                #     name="Bearish Fib Target (🌋)",
+                #     hovertemplate="Time: %{x}<br>F%: %{y}<br>Breakdown below Fib Target<extra></extra>"
+                # ))
                 # # 🏇 Mike rides real VWAP up
                 # mask_vwap_up = intraday["VWAP_Cross_Emoji"] == "🥁"
                 # scatter_vwap_up = go.Scatter(
