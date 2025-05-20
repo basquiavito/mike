@@ -3700,72 +3700,72 @@ if st.sidebar.button("Run Analysis"):
                                         # Step 1: For each Buy TDST bar, get the F% level
                     buy_tdst_levels = intraday.loc[tdst_buy_mask, "F_numeric"]
 
-                    # Step 2: Loop through each Buy TDST and track from that point forward
-                    for buy_idx, tdst_level in buy_tdst_levels.items():
-                        # Get index location of the TDST signal
-                        i = intraday.index.get_loc(buy_idx)
+                    # # Step 2: Loop through each Buy TDST and track from that point forward
+                    # for buy_idx, tdst_level in buy_tdst_levels.items():
+                    #     # Get index location of the TDST signal
+                    #     i = intraday.index.get_loc(buy_idx)
 
-                        # Look at all bars forward from the TDST bar
-                        future = intraday.iloc[i+1:].copy()
+                    #     # Look at all bars forward from the TDST bar
+                    #     future = intraday.iloc[i+1:].copy()
 
-                        # Find where F% crosses and stays above the TDST level for 2 bars
-                        above = future["F_numeric"] > tdst_level
-                        two_bar_hold = above & above.shift(-1)
+                    #     # Find where F% crosses and stays above the TDST level for 2 bars
+                    #     above = future["F_numeric"] > tdst_level
+                    #     two_bar_hold = above & above.shift(-1)
 
-                        # Find the first time this happens
-                        if two_bar_hold.any():
-                            ghost_idx = two_bar_hold[two_bar_hold].index[0]  # first valid bar
+                    #     # Find the first time this happens
+                    #     if two_bar_hold.any():
+                    #         ghost_idx = two_bar_hold[two_bar_hold].index[0]  # first valid bar
 
-                            # Plot 👻 emoji on the first bar
-                            fig.add_trace(
-                                go.Scatter(
-                                    x=[intraday.at[ghost_idx, "Time"]],
-                                    y=[intraday.at[ghost_idx, "F_numeric"] + 144],
-                                    mode="text",
-                                    text=["👻"],
-                                    textposition="middle center",
-                                    textfont=dict(size=40, color="purple"),
-                                    name="Confirmed Buy TDST Breakout",
-                                    hovertemplate="Time: %{x}<br>F%: %{y}<br>%{text}"
-                                ),
-                                row=1, col=1
-                            )
+                    #         # Plot 👻 emoji on the first bar
+                    #         fig.add_trace(
+                    #             go.Scatter(
+                    #                 x=[intraday.at[ghost_idx, "Time"]],
+                    #                 y=[intraday.at[ghost_idx, "F_numeric"] + 144],
+                    #                 mode="text",
+                    #                 text=["👻"],
+                    #                 textposition="middle center",
+                    #                 textfont=dict(size=40, color="purple"),
+                    #                 name="Confirmed Buy TDST Breakout",
+                    #                 hovertemplate="Time: %{x}<br>F%: %{y}<br>%{text}"
+                    #             ),
+                    #             row=1, col=1
+                    #         )
 
 
-                    # Step 1: Get all Sell TDST points (each defines its own world)
-                    sell_tdst_levels = intraday.loc[tdst_sell_mask, "F_numeric"]
-                    sell_tdst_indices = list(sell_tdst_levels.index) + [intraday.index[-1]]  # add end of session as last boundary
+                    # # Step 1: Get all Sell TDST points (each defines its own world)
+                    # sell_tdst_levels = intraday.loc[tdst_sell_mask, "F_numeric"]
+                    # sell_tdst_indices = list(sell_tdst_levels.index) + [intraday.index[-1]]  # add end of session as last boundary
 
-                    # Step 2: Loop through each Sell TDST "world"
-                    for i in range(len(sell_tdst_levels)):
-                        tdst_idx = sell_tdst_levels.index[i]
-                        tdst_level = sell_tdst_levels.iloc[i]
+                    # # Step 2: Loop through each Sell TDST "world"
+                    # for i in range(len(sell_tdst_levels)):
+                    #     tdst_idx = sell_tdst_levels.index[i]
+                    #     tdst_level = sell_tdst_levels.iloc[i]
 
-                        # Define the domain: from this Sell TDST until the next one (or end of day)
-                        domain_start = intraday.index.get_loc(tdst_idx) + 1
-                        domain_end = intraday.index.get_loc(sell_tdst_indices[i+1])  # next TDST or end
+                    #     # Define the domain: from this Sell TDST until the next one (or end of day)
+                    #     domain_start = intraday.index.get_loc(tdst_idx) + 1
+                    #     domain_end = intraday.index.get_loc(sell_tdst_indices[i+1])  # next TDST or end
 
-                        domain = intraday.iloc[domain_start:domain_end]
+                    #     domain = intraday.iloc[domain_start:domain_end]
 
-                        # Condition: F% crosses below and stays below for 2 bars
-                        below = domain["F_numeric"] < tdst_level
-                        confirmed = below & below.shift(-1)
+                    #     # Condition: F% crosses below and stays below for 2 bars
+                    #     below = domain["F_numeric"] < tdst_level
+                    #     confirmed = below & below.shift(-1)
 
-                        if confirmed.any():
-                            ghost_idx = confirmed[confirmed].index[0]
-                            fig.add_trace(
-                                go.Scatter(
-                                    x=[intraday.at[ghost_idx, "Time"]],
-                                    y=[intraday.at[ghost_idx, "F_numeric"] - 144],
-                                    mode="text",
-                                    text=["🫥"],
-                                    textposition="middle center",
-                                    textfont=dict(size=40, color="purple"),
-                                    name="Confirmed Sell TDST Breakdown",
-                                    hovertemplate="Time: %{x}<br>F%: %{y}<br>%{text}"
-                                ),
-                                row=1, col=1
-                            )
+                    #     if confirmed.any():
+                    #         ghost_idx = confirmed[confirmed].index[0]
+                    #         fig.add_trace(
+                    #             go.Scatter(
+                    #                 x=[intraday.at[ghost_idx, "Time"]],
+                    #                 y=[intraday.at[ghost_idx, "F_numeric"] - 144],
+                    #                 mode="text",
+                    #                 text=["🫥"],
+                    #                 textposition="middle center",
+                    #                 textfont=dict(size=40, color="purple"),
+                    #                 name="Confirmed Sell TDST Breakdown",
+                    #                 hovertemplate="Time: %{x}<br>F%: %{y}<br>%{text}"
+                    #             ),
+                    #             row=1, col=1
+                    #         )
 
 
 
@@ -4107,97 +4107,97 @@ if st.sidebar.button("Run Analysis"):
 
 
 
-                short_entry_trace = go.Scatter(
-                    x=intraday.loc[intraday["Entry_Alert_Short"], "Time"],
-                    y=intraday.loc[intraday["Entry_Alert_Short"], "F_numeric"] - 8,
-                    mode="text",
-                    text=[" ✅"] * intraday["Entry_Alert_Short"].sum(),
-                    textposition="bottom center",
-                    textfont=dict(size=21, color="lime"),
-                    name="Short Entry (✅)"
-                )
-                fig.add_trace(short_entry_trace, row=1, col=1)
+                # short_entry_trace = go.Scatter(
+                #     x=intraday.loc[intraday["Entry_Alert_Short"], "Time"],
+                #     y=intraday.loc[intraday["Entry_Alert_Short"], "F_numeric"] - 8,
+                #     mode="text",
+                #     text=[" ✅"] * intraday["Entry_Alert_Short"].sum(),
+                #     textposition="bottom center",
+                #     textfont=dict(size=21, color="lime"),
+                #     name="Short Entry (✅)"
+                # )
+                # fig.add_trace(short_entry_trace, row=1, col=1)
 
 
 
 
 
 
-                long_entry_trace = go.Scatter(
-                    x=intraday.loc[intraday["Entry_Alert_Long"], "Time"],
-                    y=intraday.loc[intraday["Entry_Alert_Long"], "F_numeric"] + 8,
-                    mode="text",
-                    text=[" ✅"] * intraday["Entry_Alert_Long"].sum(),
-                    textposition="top center",
-                    textfont=dict(size=21, color="lime"),
-                    name="Long Entry (✅)"
-                )
-                fig.add_trace(long_entry_trace, row=1, col=1)
+                # long_entry_trace = go.Scatter(
+                #     x=intraday.loc[intraday["Entry_Alert_Long"], "Time"],
+                #     y=intraday.loc[intraday["Entry_Alert_Long"], "F_numeric"] + 8,
+                #     mode="text",
+                #     text=[" ✅"] * intraday["Entry_Alert_Long"].sum(),
+                #     textposition="top center",
+                #     textfont=dict(size=21, color="lime"),
+                #     name="Long Entry (✅)"
+                # )
+                # fig.add_trace(long_entry_trace, row=1, col=1)
 
 
 
 
-                # Mask where Entry Type II (delayed volume confirmation) is True
-                mask_long_delayed = intraday["Entry_Alert_Long_Delayed"]
-                mask_short_delayed = intraday["Entry_Alert_Short_Delayed"]
+                # # Mask where Entry Type II (delayed volume confirmation) is True
+                # mask_long_delayed = intraday["Entry_Alert_Long_Delayed"]
+                # mask_short_delayed = intraday["Entry_Alert_Short_Delayed"]
 
-                # ☑️ Long Entry after delayed volume
-                scatter_long_delayed = go.Scatter(
-                    x=intraday.loc[mask_long_delayed, "Time"],
-                    y=intraday.loc[mask_long_delayed, "F_numeric"] + 8,  # Offset upward
-                    mode="text",
-                    text=["☑️"] * mask_long_delayed.sum(),
-                    textposition="top center",
-                    textfont=dict(size=13, color="lime"),
-                    name="Delayed Long Entry (☑️)",
-                    hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>☑️ Delayed Long Entry<extra></extra>"
-                )
+                # # ☑️ Long Entry after delayed volume
+                # scatter_long_delayed = go.Scatter(
+                #     x=intraday.loc[mask_long_delayed, "Time"],
+                #     y=intraday.loc[mask_long_delayed, "F_numeric"] + 8,  # Offset upward
+                #     mode="text",
+                #     text=["☑️"] * mask_long_delayed.sum(),
+                #     textposition="top center",
+                #     textfont=dict(size=13, color="lime"),
+                #     name="Delayed Long Entry (☑️)",
+                #     hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>☑️ Delayed Long Entry<extra></extra>"
+                # )
 
-                # ☑️ Short Entry after delayed volume
-                scatter_short_delayed = go.Scatter(
-                    x=intraday.loc[mask_short_delayed, "Time"],
-                    y=intraday.loc[mask_short_delayed, "F_numeric"] - 8,  # Offset downward
-                    mode="text",
-                    text=["☑️"] * mask_short_delayed.sum(),
-                    textposition="bottom center",
-                    textfont=dict(size=13, color="red"),
-                    name="Delayed Short Entry (☑️)",
-                    hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>☑️ Delayed Short Entry<extra></extra>"
-                )
-
-
-
-
-
-                # Add to F% plot
-                mask_ops_bear = intraday["OPS Transition"] == "🐻"
-                mask_ops_panda = intraday["OPS Transition"] == "🐼"
-
-                scatter_ops_bear = go.Scatter(
-                    x=intraday.loc[mask_ops_bear, "Time"],
-                    y=intraday.loc[mask_ops_bear, "F_numeric"] - 7,  # Offset to avoid overlap
-                    mode="text",
-                    text="🐻",
-                    textposition="bottom center",
-                    textfont=dict(size=22, color="red"),
-                    name="OPS Bearish Flip",
-                    hovertemplate="Time: %{x}<br>F%: %{y}<br>OPS Turned Bearish<extra></extra>"
+                # # ☑️ Short Entry after delayed volume
+                # scatter_short_delayed = go.Scatter(
+                #     x=intraday.loc[mask_short_delayed, "Time"],
+                #     y=intraday.loc[mask_short_delayed, "F_numeric"] - 8,  # Offset downward
+                #     mode="text",
+                #     text=["☑️"] * mask_short_delayed.sum(),
+                #     textposition="bottom center",
+                #     textfont=dict(size=13, color="red"),
+                #     name="Delayed Short Entry (☑️)",
+                #     hovertemplate="Time: %{x}<br>F%: %{y:.2f}<br>☑️ Delayed Short Entry<extra></extra>"
                 )
 
-                scatter_ops_panda = go.Scatter(
-                    x=intraday.loc[mask_ops_panda, "Time"],
-                    y=intraday.loc[mask_ops_panda, "F_numeric"] + 7,  # Offset to avoid overlap
-                    mode="text",
-                    text="🐼",
-                    textposition="top center",
-                    textfont=dict(size=22, color="green"),
-                    name="OPS Bullish Flip",
-                    hovertemplate="Time: %{x}<br>F%: %{y}<br>OPS Turned Bullish<extra></extra>"
-                )
 
-                # Add to the F% plot
-                fig.add_trace(scatter_ops_bear, row=1, col=1)
-                fig.add_trace(scatter_ops_panda, row=1, col=1)
+
+
+
+                # # Add to F% plot
+                # mask_ops_bear = intraday["OPS Transition"] == "🐻"
+                # mask_ops_panda = intraday["OPS Transition"] == "🐼"
+
+                # scatter_ops_bear = go.Scatter(
+                #     x=intraday.loc[mask_ops_bear, "Time"],
+                #     y=intraday.loc[mask_ops_bear, "F_numeric"] - 7,  # Offset to avoid overlap
+                #     mode="text",
+                #     text="🐻",
+                #     textposition="bottom center",
+                #     textfont=dict(size=22, color="red"),
+                #     name="OPS Bearish Flip",
+                #     hovertemplate="Time: %{x}<br>F%: %{y}<br>OPS Turned Bearish<extra></extra>"
+                # )
+
+                # scatter_ops_panda = go.Scatter(
+                #     x=intraday.loc[mask_ops_panda, "Time"],
+                #     y=intraday.loc[mask_ops_panda, "F_numeric"] + 7,  # Offset to avoid overlap
+                #     mode="text",
+                #     text="🐼",
+                #     textposition="top center",
+                #     textfont=dict(size=22, color="green"),
+                #     name="OPS Bullish Flip",
+                #     hovertemplate="Time: %{x}<br>F%: %{y}<br>OPS Turned Bullish<extra></extra>"
+                # )
+
+                # # Add to the F% plot
+                # fig.add_trace(scatter_ops_bear, row=1, col=1)
+                # fig.add_trace(scatter_ops_panda, row=1, col=1)
 
 
 # #*******************************************************************************************************************************************************************************
