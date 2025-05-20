@@ -3121,37 +3121,37 @@ if st.sidebar.button("Run Analysis"):
 
 
 
-                    # Kumo Twist Bullish (👼🏼): SpanA crosses above SpanB
-                    twist_bullish = (intraday["SpanA_F"] > intraday["SpanB_F"]) & (intraday["SpanA_F"].shift(1) <= intraday["SpanB_F"].shift(1))
+                    # # Kumo Twist Bullish (👼🏼): SpanA crosses above SpanB
+                    # twist_bullish = (intraday["SpanA_F"] > intraday["SpanB_F"]) & (intraday["SpanA_F"].shift(1) <= intraday["SpanB_F"].shift(1))
 
-                    scatter_twist_bullish = go.Scatter(
-                        x=intraday.loc[twist_bullish, "Time"],
-                        y=intraday.loc[twist_bullish, "SpanA_F"] + 89,
-                        mode="text",
-                        text=["👼🏼"] * twist_bullish.sum(),
-                        textposition="top center",
-                        textfont=dict(size=34),
-                        name="Kumo Twist Bullish (👼🏼)",
-                        hovertemplate="Time: %{x}<br>👼🏼 SpanA crossed above SpanB<extra></extra>"
-                    )
+                    # scatter_twist_bullish = go.Scatter(
+                    #     x=intraday.loc[twist_bullish, "Time"],
+                    #     y=intraday.loc[twist_bullish, "SpanA_F"] + 89,
+                    #     mode="text",
+                    #     text=["👼🏼"] * twist_bullish.sum(),
+                    #     textposition="top center",
+                    #     textfont=dict(size=34),
+                    #     name="Kumo Twist Bullish (👼🏼)",
+                    #     hovertemplate="Time: %{x}<br>👼🏼 SpanA crossed above SpanB<extra></extra>"
+                    # )
 
-                    # Kumo Twist Bearish (👺): SpanA crosses below SpanB
-                    twist_bearish = (intraday["SpanA_F"] < intraday["SpanB_F"]) & (intraday["SpanA_F"].shift(1) >= intraday["SpanB_F"].shift(1))
+                    # # Kumo Twist Bearish (👺): SpanA crosses below SpanB
+                    # twist_bearish = (intraday["SpanA_F"] < intraday["SpanB_F"]) & (intraday["SpanA_F"].shift(1) >= intraday["SpanB_F"].shift(1))
 
-                    scatter_twist_bearish = go.Scatter(
-                        x=intraday.loc[twist_bearish, "Time"],
-                        y=intraday.loc[twist_bearish, "SpanA_F"] - 89,
-                        mode="text",
-                        text=["👺"] * twist_bearish.sum(),
-                        textposition="bottom center",
-                        textfont=dict(size=34),
-                        name="Kumo Twist Bearish (👺)",
-                        hovertemplate="Time: %{x}<br>👺 SpanA crossed below SpanB<extra></extra>"
-                    )
+                    # scatter_twist_bearish = go.Scatter(
+                    #     x=intraday.loc[twist_bearish, "Time"],
+                    #     y=intraday.loc[twist_bearish, "SpanA_F"] - 89,
+                    #     mode="text",
+                    #     text=["👺"] * twist_bearish.sum(),
+                    #     textposition="bottom center",
+                    #     textfont=dict(size=34),
+                    #     name="Kumo Twist Bearish (👺)",
+                    #     hovertemplate="Time: %{x}<br>👺 SpanA crossed below SpanB<extra></extra>"
+                    # )
 
-                    # Add to the F% plot
-                    fig.add_trace(scatter_twist_bullish, row=1, col=1)
-                    fig.add_trace(scatter_twist_bearish, row=1, col=1)
+                    # # Add to the F% plot
+                    # fig.add_trace(scatter_twist_bullish, row=1, col=1)
+                    # fig.add_trace(scatter_twist_bearish, row=1, col=1)
 
 
 
